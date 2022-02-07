@@ -1,0 +1,16 @@
+[package]
+name = "exjack"
+version = "0.1.0"
+authors = []
+edition = "2018"
+
+[lib]
+name = "exjack"
+path = "src/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+rustler = "0.23.0"
+jack = "0.9"
+crossbeam = "0.8.1"
+futures = "0.3.2"
