@@ -11,12 +11,10 @@ use futures::*;
 use std::sync::atomic::{AtomicBool};
 use std::sync::{Arc, Mutex, mpsc};
 
-//pub struct SenderChannel(Mutex<Option<oneshot::Sender<i32>>>);
-pub struct SenderChannel(Mutex<Option<mpsc::Sender<i32>>>);
+pub struct SenderChannel(Mutex<mpsc::Sender<Vec<f64>>>);
 pub struct ResponseChannel(Mutex<Option<oneshot::Sender<String>>>);
 pub struct ShutdownChannel(Mutex<Option<oneshot::Sender<()>>>);
 pub struct Select(Arc<AtomicBool>);
-//type StartResult = Result<(Atom, ResourceArc<ShutdownChannel>, ResourceArc<Select>), Error>;
 type StartResult = Result<(Atom, ResourceArc<SenderChannel>), Error>;
 
 pub fn load(env: Env, _: Term) -> bool {
@@ -38,36 +36,22 @@ pub fn start(env: Env, _term: Term) -> StartResult {
 
     let pid = env.pid();
 
-    let mut frequency = 220;
-    let sample_rate = client.sample_rate();
-    let frame_t = 1.0 / sample_rate as f64;
-    let mut time = 0.0;
-    //let (tx, mut rx) = oneshot::channel::<i32>();
-    let (tx, rx) = mpsc::channel::<i32>();
+    let (tx, rx) = mpsc::channel::<Vec<f64>>();
     let process = jack::ClosureProcessHandler::new(
         move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
             // Get output buffer
             let out = out_port.as_mut_slice(ps);
+            println!("{:?}", out.len());
+            let frames = vec![];
 
-            // Check frequency requests
-            /*
-            futures::executor::block_on(async {
-                println!("MAIN: waiting for msg...");
-                println!("MAIN: got: {:?}", rx.await)
-            });
-            */
             while let Ok(f) = rx.try_recv() {
-                time = 0.0;
-                frequency = f;
+                frames = f;
                 println!("Received!!!!!!");
             }
 
             // Write output
             for v in out.iter_mut() {
-                let x = frequency as f64 * time * 2.0 * std::f64::consts::PI;
-                let y = x.sin();
                 *v = y as f32;
-                time += frame_t;
             }
 
             // Continue as normal
@@ -90,12 +74,6 @@ pub fn start(env: Env, _term: Term) -> StartResult {
         loop {
         }
     });
-    // processing starts here
-
-    // 5. wait or do some processing while your handler is running in real time.
-    println!("Enter an integer value to change the frequency of the sine wave.");
-        //tx.send(f).unwrap();
-
     // 6. Optional deactivate. Not required since active_client will deactivate on
     // drop, though explicit deactivate may help you identify errors in
     // deactivate.
@@ -117,24 +95,16 @@ pub fn start(env: Env, _term: Term) -> StartResult {
     });
     */
 
-    let sender_ref = ResourceArc::new(SenderChannel(Mutex::new(Some(tx))));
+    let sender_ref = ResourceArc::new(SenderChannel(Mutex::new(tx)));
     Ok((atoms::ok(), sender_ref))
 }
 
 
 #[rustler::nif]
-fn send_frames(resource: ResourceArc<SenderChannel>, frames: i32) -> Atom {
-    let mut lock = resource.0.lock().unwrap();
-    println!("Sending frames {}", frames);
-
-    if let Some(tx) = lock.take() {
-        let _ = tx.send(frames);
-        drop(lock);
-        atoms::ok()
-    } else {
-        println!("Could not get lock!!!!!!!!");
-        atoms::error()
-    }
+fn send_frames(resource: ResourceArc<SenderChannel>, frames: Vec<f64>) -> Atom {
+    let arc = resource.0.lock().unwrap().clone();
+    let _ = arc.send(frames);
+    atoms::ok()
 }
 
 rustler::init!("Elixir.ExJack.Native", [
