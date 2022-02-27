@@ -3,15 +3,19 @@ defmodule ExJack.Server do
 
   require Logger
 
-  defstruct frame_channel: nil
+  defstruct frame_channel: nil, current_frame: 0, callback: &ExJack.Server.noop/1
 
-  def start_link(opts) do
+  def noop(_) do 
+  end
+
+  def start_link(%{callback: _, name: _} = opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def init(opts) do
-    {:ok, frame_channel, buffer_size } = ExJack.Native.start(opts)
-    {:ok, %__MODULE__{frame_channel: frame_channel}}
+  def init(%{callback: callback, name: name} = _opts) do
+    {:ok, frame_channel, _buffer_size} = ExJack.Native.start(%{name: name})
+
+    {:ok, %__MODULE__{frame_channel: frame_channel, current_frame: 0, callback: callback}}
   end
 
   def handle_cast({:send_frames, frames}, %{frame_channel: frame_channel} = state) do
@@ -20,11 +24,11 @@ defmodule ExJack.Server do
     {:noreply, state}
   end
 
-  def handle_info({:request, frames}, state) do
-    IO.inspect("Requesting #{frames}")
-    send_frames(sin_freq(220.0, 100))
+  def handle_info({:request, requested_frames}, %{current_frame: current_frame, callback: callback} = state) do
+    end_frames = current_frame + requested_frames - 1
+    send_frames(callback.(current_frame..end_frames))
 
-    {:noreply, state}
+    {:noreply, Map.put(state, :current_frame, end_frames + 1)}
   end
 
   def send_frames(frames) do
@@ -34,14 +38,5 @@ defmodule ExJack.Server do
   def terminate(_, state) do
     #ExJack.stop(state.shutdown)
     :ok
-  end
-
-  def sin_freq(pitch, time) do
-    radians_per_second = pitch * 2.0 * :math.pi()
-    seconds_per_frame = 1.0 / 44100.0
-
-    Enum.map(0..255, fn i ->
-      :math.sin(radians_per_second * i * seconds_per_frame)
-    end)
   end
 end

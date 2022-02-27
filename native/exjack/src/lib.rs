@@ -1,13 +1,8 @@
-//! Sine wave generator with frequency configuration exposed through standard
-//! input.
+//! Elixir NIF to JACK audio server API.
 
 mod atoms;
-//use crate::atoms;
-use rustler::{Atom, Encoder, Env, Error, NifMap as Map, OwnedEnv, ResourceArc, Term};
-//use crossbeam::channel::bounded;
+use rustler::{Atom, Encoder, Env, Error, OwnedEnv, ResourceArc, Term};
 use futures::channel::oneshot;
-//use std::str::FromStr;
-use futures::*;
 use std::sync::atomic::AtomicBool;
 use std::sync::{mpsc, Arc, Mutex};
 
@@ -38,20 +33,18 @@ pub fn start(env: Env, _term: Term) -> StartResult {
     let pid = env.pid();
 
 
-    let buffer_size = client.buffer_size();
     let (tx, rx) = mpsc::channel::<Vec<f32>>();
     let process = jack::ClosureProcessHandler::new(
         move |_: &jack::Client, ps: &jack::ProcessScope| -> jack::Control {
             let mut env = OwnedEnv::new();
             env.send_and_clear(&pid, move |env| {
-                (atoms::request(), buffer_size).encode(env)
+                let frames = ps.n_frames();
+                (atoms::request(), frames).encode(env)
             });
 
             let out = out_port.as_mut_slice(ps);
-            //println!("{:?}", out.len());
             
             while let Ok(f) = rx.try_recv() {
-                //println!("{:?} {:?} {:?}", out.len(), f.len(), f);
                 out.clone_from_slice(&f);
             }
 
@@ -62,7 +55,6 @@ pub fn start(env: Env, _term: Term) -> StartResult {
 
     let buffer_size = client.buffer_size();
     let sample_rate = client.sample_rate();
-    println!("{:?}", buffer_size);
 
     std::thread::spawn(move || {
         let active_client = client.activate_async((), process).unwrap();
@@ -100,7 +92,7 @@ pub fn start(env: Env, _term: Term) -> StartResult {
     */
 
     let sender_ref = ResourceArc::new(SenderChannel(Mutex::new(tx)));
-    Ok((atoms::ok(), sender_ref, buffer_size ))
+    Ok((atoms::ok(), sender_ref, buffer_size))
 }
 
 #[rustler::nif]
