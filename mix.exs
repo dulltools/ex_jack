@@ -6,14 +6,13 @@ defmodule ExJack.MixProject do
       app: :ex_jack,
       version: "0.1.0",
       elixir: "~> 1.13",
+      build_embedded: Mix.env() == :prod,
+      start_permanent: Mix.env() == :prod,
+      compilers: Mix.compilers(),
+      # rustler_crates: rustler_crates(),
 
-      build_embedded: Mix.env == :prod,
-      start_permanent: Mix.env == :prod,
-      compilers: Mix.compilers,
-      #rustler_crates: rustler_crates(),
-
-     # compilers: [:elixir_make] ++ Mix.compilers(),
-     # make_cwd: "c_src",
+      # compilers: [:elixir_make] ++ Mix.compilers(),
+      # make_cwd: "c_src",
       deps: deps()
     ]
   end

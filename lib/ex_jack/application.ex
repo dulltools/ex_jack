@@ -5,7 +5,7 @@ defmodule ExJack.Application do
 
   def start(_type, _args) do
     children = [
-      ExJack.Server,
+      ExJack.Server
     ]
 
     opts = [strategy: :one_for_one, name: ExJack.Supervisor]

@@ -5,7 +5,7 @@ defmodule ExJack.Server do
 
   defstruct frame_channel: nil, current_frame: 0, callback: &ExJack.Server.noop/1
 
-  def noop(_) do 
+  def noop(_) do
     []
   end
 
@@ -29,7 +29,10 @@ defmodule ExJack.Server do
     {:noreply, state}
   end
 
-  def handle_info({:request, requested_frames}, %{current_frame: current_frame, callback: callback} = state) do
+  def handle_info(
+        {:request, requested_frames},
+        %{current_frame: current_frame, callback: callback} = state
+      ) do
     end_frames = current_frame + requested_frames - 1
     send_frames(callback.(current_frame..end_frames))
 
@@ -47,7 +50,7 @@ defmodule ExJack.Server do
   end
 
   def terminate(_, state) do
-    #ExJack.stop(state.shutdown)
+    # ExJack.stop(state.shutdown)
     :ok
   end
 end

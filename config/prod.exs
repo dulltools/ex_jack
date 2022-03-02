@@ -1,2 +1,1 @@
-config :ex_jack, ExJack.Native,
-  mode: :release
+config :ex_jack, ExJack.Native, mode: :release
