@@ -45,6 +45,7 @@ pub fn start(env: Env, _term: Term) -> StartResult {
             let out = out_port.as_mut_slice(ps);
             
             while let Ok(f) = rx.try_recv() {
+                println!("Received");
                 out.clone_from_slice(&f);
             }
 

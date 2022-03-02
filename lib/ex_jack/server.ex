@@ -6,16 +6,21 @@ defmodule ExJack.Server do
   defstruct frame_channel: nil, current_frame: 0, callback: &ExJack.Server.noop/1
 
   def noop(_) do 
+    []
   end
 
-  def start_link(%{callback: _, name: _} = opts) do
+  def start_link(%{name: _} = opts) do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def init(%{callback: callback, name: name} = _opts) do
+  def init(%{name: name} = _opts) do
     {:ok, frame_channel, _buffer_size} = ExJack.Native.start(%{name: name})
 
-    {:ok, %__MODULE__{frame_channel: frame_channel, current_frame: 0, callback: callback}}
+    {:ok, %__MODULE__{frame_channel: frame_channel, current_frame: 0}}
+  end
+
+  def handle_cast({:set_callback, callback}, state) do
+    {:noreply, %{state | callback: callback}}
   end
 
   def handle_cast({:send_frames, frames}, %{frame_channel: frame_channel} = state) do
@@ -28,11 +33,17 @@ defmodule ExJack.Server do
     end_frames = current_frame + requested_frames - 1
     send_frames(callback.(current_frame..end_frames))
 
-    {:noreply, Map.put(state, :current_frame, end_frames + 1)}
+    {:noreply, %{state | current_frame: end_frames + 1}}
+  end
+
+  def set_callback(callback) do
+    GenServer.cast(__MODULE__, {:set_callback, callback})
   end
 
   def send_frames(frames) do
-    GenServer.cast(__MODULE__, {:send_frames, frames})
+    unless Enum.empty?(frames) do
+      GenServer.cast(__MODULE__, {:send_frames, frames})
+    end
   end
 
   def terminate(_, state) do
