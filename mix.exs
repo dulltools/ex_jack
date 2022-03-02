@@ -9,7 +9,7 @@ defmodule ExJack.MixProject do
 
       build_embedded: Mix.env == :prod,
       start_permanent: Mix.env == :prod,
-      compilers: [:rustler] ++ Mix.compilers,
+      compilers: Mix.compilers,
       #rustler_crates: rustler_crates(),
 
      # compilers: [:elixir_make] ++ Mix.compilers(),
@@ -34,16 +34,4 @@ defmodule ExJack.MixProject do
       {:rustler, github: "hansihe/rustler", sparse: "rustler_mix"}
     ]
   end
-
-  """
-    defp rustler_crates do
-    [exjack: [
-      path: "native/exjack",
-      mode: rustc_mode(Mix.env)
-    ]]
-  end
-  """
-
-  defp rustc_mode(:prod), do: :release
-  defp rustc_mode(_), do: :debug
 end
