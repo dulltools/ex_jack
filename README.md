@@ -23,6 +23,7 @@ It may help to view what's going with JACK using a GUI like https://qjackctl.sou
 
 ## TODO
 - [x] Play audio frames 
-- [ ] Documentaiton (generate ExDoc + usage with additional examples)
+- [ ] Documentation (generate ExDoc + usage with additional examples)
 - [ ] Input access
 - [ ] Additional tests/typespecs in Rust/Elixir
+- [ ] Release initial version to Hex
