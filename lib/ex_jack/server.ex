@@ -3,7 +3,7 @@ defmodule ExJack.Server do
 
   require Logger
 
-  defstruct frame_channel: nil, current_frame: 0, callback: &ExJack.Server.noop/1
+  defstruct handler: nil, shutdown_handler: nil, current_frame: 0, callback: &ExJack.Server.noop/1
 
   def noop(_) do
     []
@@ -13,18 +13,18 @@ defmodule ExJack.Server do
     GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
-  def init(%{name: name} = _opts) do
-    {:ok, frame_channel, _buffer_size} = ExJack.Native.start(%{name: name})
+  def init(opts) do
+    {:ok, handler, shutdown_handler, _opts} = ExJack.Native.start(opts)
 
-    {:ok, %__MODULE__{frame_channel: frame_channel, current_frame: 0}}
+    {:ok, %__MODULE__{handler: handler, shutdown_handler: shutdown_handler, current_frame: 0}}
   end
 
   def handle_cast({:set_callback, callback}, state) do
     {:noreply, %{state | callback: callback}}
   end
 
-  def handle_cast({:send_frames, frames}, %{frame_channel: frame_channel} = state) do
-    ExJack.Native.send_frames(frame_channel, frames)
+  def handle_cast({:send_frames, frames}, %{handler: handler} = state) do
+    ExJack.Native.send_frames(handler, frames)
 
     {:noreply, state}
   end
@@ -39,6 +39,11 @@ defmodule ExJack.Server do
     {:noreply, %{state | current_frame: end_frames + 1}}
   end
 
+  def terminate(_reason, %{shutdown_handler: shutdown_handler}) do
+    ExJack.Native.stop(shutdown_handler)
+    :ok
+  end
+
   def set_callback(callback) do
     GenServer.cast(__MODULE__, {:set_callback, callback})
   end
@@ -47,10 +52,5 @@ defmodule ExJack.Server do
     unless Enum.empty?(frames) do
       GenServer.cast(__MODULE__, {:send_frames, frames})
     end
-  end
-
-  def terminate(_, state) do
-    # ExJack.stop(state.shutdown)
-    :ok
   end
 end

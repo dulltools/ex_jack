@@ -12,5 +12,4 @@ crate-type = ["cdylib"]
 [dependencies]
 rustler = "0.23.0"
 jack = "0.9"
-crossbeam = "0.8.1"
-futures = "0.3.2"
+futures = { version= "0.3.2", features = ["compat"]}

@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 /_build
 /cover
 /deps
@@ -17,4 +16,5 @@ ex_jack-*.tar
 # Temporary files, for example, from tests.
 /tmp/
 
+priv/native
 target
