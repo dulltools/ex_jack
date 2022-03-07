@@ -1,21 +1,28 @@
-# ex_jack
-JACK interface for Elixir using Port Drivers
+# ExJack
+JACK interface for Elixir using Rustler-based NIF.
 
-**TODO: Add description**
+The purpose of this library is to provide an audio outlet for Elixir through all platforms. However, if you're on Linux, and don't need JACK outright, it's probably preferable to use [ExAlsa](https://github.com/FraihaAV/ex_alsa) and interface with ALSA directly.
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `ex_jack` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:ex_jack, "~> 0.1.0"}
-  ]
-end
+## Requirements
+```
+Tested with:
+JACK 2 (see https://github.com/RustAudio/rust-jack)
+Elixir 1.12
+Rust 1.56.1
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/ex_jack>.
+## Set-up (OSX)
+```
+brew install jack
+brew services start jack
+
+mix test
+```
+
+It may help to view what's going with JACK using a GUI like https://qjackctl.sourceforge.io/.
+
+## TODO
+- [x] Play audio frames 
+- [ ] Documentaiton (generate ExDoc + usage with additional examples)
+- [ ] Input access
+- [ ] Additional tests/typespecs in Rust/Elixir
