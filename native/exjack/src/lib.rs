@@ -5,7 +5,9 @@ use rustler::{Atom, Encoder, Env, Error, NifMap, OwnedEnv, ResourceArc, Term};
 use std::sync::{mpsc, Mutex};
 use std::{thread, time};
 
-pub struct SenderChannel(Mutex<mpsc::Sender<Vec<f32>>>);
+type Sample = f32;
+
+pub struct SenderChannel(Mutex<mpsc::Sender<Vec<Sample>>>);
 pub struct ShutdownChannel(Mutex<Option<mpsc::Sender<()>>>);
 type StartResult = Result<
     (
@@ -48,7 +50,7 @@ pub fn _start(env: Env, config: Config) -> StartResult {
     let pid = env.pid();
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
-    let (frames_tx, frames_rx) = mpsc::channel::<Vec<f32>>();
+    let (frames_tx, frames_rx) = mpsc::channel::<Vec<Sample>>();
 
     let use_callback = config.use_callback;
     let process = jack::ClosureProcessHandler::new(
@@ -109,7 +111,7 @@ pub fn _start(env: Env, config: Config) -> StartResult {
 }
 
 #[rustler::nif]
-fn send_frames(resource: ResourceArc<SenderChannel>, frames: Vec<f32>) -> Atom {
+fn send_frames(resource: ResourceArc<SenderChannel>, frames: Vec<Sample>) -> Atom {
     let arc = resource.0.lock().unwrap().clone();
     let _ = arc.send(frames);
     atoms::ok()

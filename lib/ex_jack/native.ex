@@ -1,13 +1,20 @@
 defmodule ExJack.Native do
   use Rustler, otp_app: :ex_jack, crate: "exjack"
 
+  @type options_t :: %{
+          name: String.t(),
+          auto_connect: boolean(),
+          use_callback: boolean()
+        }
+
   @start_defaults %{
     name: __MODULE__,
     auto_connect: true,
     use_callback: true
   }
 
-  def start(opts \\ %{}) do
+  @spec start(options_t) :: any()
+  def start(opts) do
     _start(Map.merge(@start_defaults, opts))
   end
 
