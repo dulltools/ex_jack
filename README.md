@@ -23,7 +23,9 @@ It may help to view what's going with JACK using a GUI like https://qjackctl.sou
 
 ## TODO
 - [x] Play audio frames 
-- [ ] Documentation (generate ExDoc + usage with additional examples)
 - [ ] Input access
-- [ ] Additional tests/typespecs in Rust/Elixir
+- [ ] Documentation (generate ExDoc + usage with additional examples)
+- [ ] Additional tests in Elixir
+- [ ] Additional tests in Rust
+- [ ] Handle variable channels with definable sources
 - [ ] Release initial version to Hex
