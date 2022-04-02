@@ -47,6 +47,8 @@ pub fn _start(env: Env, config: Config) -> StartResult {
         .register_port("out", jack::AudioOut::default())
         .unwrap();
 
+    let in_port = client.register_port("in", jack::AudioIn::default()).unwrap();
+
     let pid = env.pid();
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
@@ -63,10 +65,19 @@ pub fn _start(env: Env, config: Config) -> StartResult {
                 });
             }
 
-            let out = out_port.as_mut_slice(ps);
+            let in_frames = in_port.as_slice(ps);
+
+            if in_frames.len() > 0 {
+                let mut env = OwnedEnv::new();
+                env.send_and_clear(&pid, move |env| {
+                    (atoms::in_frames(), in_frames).encode(env)
+                });
+            }
+
+            let out_frames = out_port.as_mut_slice(ps);
 
             while let Ok(f) = frames_rx.try_recv() {
-                out.clone_from_slice(&f);
+                out_frames.clone_from_slice(&f);
             }
 
             jack::Control::Continue
