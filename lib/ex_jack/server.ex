@@ -1,18 +1,18 @@
 defmodule ExJack.Server do
   use GenServer
 
-  defstruct handler: nil, 
-    shutdown_handler: nil, 
-    current_frame: 0, 
-    output_func: &ExJack.Server.noop/1, 
-    input_func: &ExJack.Server.noop/1
+  defstruct handler: nil,
+            shutdown_handler: nil,
+            current_frame: 0,
+            output_func: &ExJack.Server.noop/1,
+            input_func: &ExJack.Server.noop/1
 
   @type t :: %__MODULE__{
           handler: any(),
           shutdown_handler: any(),
           current_frame: pos_integer(),
           output_func: output_func_t,
-          input_func: input_func_t,
+          input_func: input_func_t
         }
 
   @type frames_t :: list(float())
