@@ -15,7 +15,7 @@ defmodule ExJack.MixProject do
       compilers: Mix.compilers(),
       deps: deps(),
       docs: docs(),
-      package: package(),
+      package: package()
     ]
   end
 
