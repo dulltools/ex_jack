@@ -66,7 +66,6 @@ defmodule ExJack.Server do
     {:noreply, %{state | input_func: output_func}}
   end
 
-
   @impl true
   @spec handle_cast({:send_frames, frames_t}, t()) :: {:noreply, t()}
   def handle_cast({:send_frames, frames}, %{handler: handler} = state) do
