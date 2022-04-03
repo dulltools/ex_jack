@@ -24,8 +24,7 @@ It may help to view what's going with JACK using a GUI like https://qjackctl.sou
 
 
 ## Usage
-
-This is an example of piping your capture to output, be wary of feedback. You have to explicity connect your capture with "ExJackDemo:in", if you're unsure how to do this, install QJackCTL and do it through the graph.
+This is an example of piping your capture to output, be wary of feedback. You have to explicity connect your capture with "ExJackDemo:in", if you're unsure how to do this, install QJackCTL.
 
 ```elixir
 $ iex -s mix
@@ -34,11 +33,14 @@ $ iex -s mix
 ```
 
 ## TODO
-- [x] Play audio frames 
-- [x] Input access
-- [ ] Documentation (generate ExDoc + usage with additional examples)
+### Road to stable version 1
+The first three are necessary to make this library useable beyond hobby projects.
+- [ ] Better support for expected frames per cycle from JACK
+- [ ] Handle variable channels with definable sources
+- [ ] Handle JACK notifications
+- [ ] Handling for cases that drop the JACK client such as underruns.
 - [ ] Additional tests in Elixir
 - [ ] Additional tests in Rust
-- [ ] Handle variable channels with definable sources
 - [ ] MCU demo
-- [ ] Release initial version to Hex
+- [ ] Improve documentation with additional examples
+- [ ] Autocorrection for xruns
