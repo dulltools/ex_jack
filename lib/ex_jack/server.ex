@@ -60,16 +60,25 @@ defmodule ExJack.Server do
     {:noreply, %{state | output_func: output_func}}
   end
 
-  @spec handle_cast({:in_frames, frames_t}, t()) :: {:noreply, t()}
-  def handle_cast({:in_frames, frames}, %{input_func: input_func} = state) do
-    input_func.frames(frames)
+  @impl true
+  @spec handle_cast({:set_input_func, output_func_t}, t()) :: {:noreply, t()}
+  def handle_cast({:set_input_func, output_func}, state) do
+    {:noreply, %{state | input_func: output_func}}
+  end
+
+
+  @impl true
+  @spec handle_cast({:send_frames, frames_t}, t()) :: {:noreply, t()}
+  def handle_cast({:send_frames, frames}, %{handler: handler} = state) do
+    ExJack.Native.send_frames(handler, frames)
 
     {:noreply, state}
   end
 
-  @spec handle_cast({:send_frames, frames_t}, t()) :: {:noreply, t()}
-  def handle_cast({:send_frames, frames}, %{handler: handler} = state) do
-    ExJack.Native.send_frames(handler, frames)
+  @impl true
+  @spec handle_info({:in_frames, frames_t}, t()) :: {:noreply, t()}
+  def handle_info({:in_frames, frames}, %{input_func: input_func} = state) do
+    input_func.(frames)
 
     {:noreply, state}
   end
