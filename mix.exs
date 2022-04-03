@@ -14,7 +14,8 @@ defmodule ExJack.MixProject do
       start_permanent: Mix.env() == :prod,
       compilers: Mix.compilers(),
       deps: deps(),
-      docs: docs()
+      docs: docs(),
+      package: package(),
     ]
   end
 
@@ -48,6 +49,17 @@ defmodule ExJack.MixProject do
       source_url: @source_url,
       groups_for_modules: [],
       skip_undefined_reference_warnings_on: ["CHANGELOG.md"]
+    ]
+  end
+
+  defp package do
+    [
+      licenses: ["MIT"],
+      maintainers: ["Adrian Fraiha"],
+      links: %{
+        "GitHub" => @source_url,
+        "Changelog" => "https://hexdocs.pm/ex_jack/changelog.html"
+      }
     ]
   end
 end

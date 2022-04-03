@@ -56,7 +56,7 @@ defmodule ExJack.Server do
   """
   @spec start_link(options_t) :: GenServer.server()
   def start_link(%{name: name} = opts) do
-    GenServer.start_link(__MODULE__, opts, name: name)
+    GenServer.start_link(__MODULE__, opts, name: String.to_atom(name))
   end
 
   @doc """
