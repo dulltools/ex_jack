@@ -63,11 +63,11 @@ defmodule ExJack.MixProject do
         native/ex_jack/Cargo.*
         native/ex_jack/README.md
         native/ex_jack/.cargo
-        checksum-Elixir.Wasmex.Native.exs
+        checksum-Elixir.ExJack.Native.exs
         .formatter.exs
         mix.exs
         README.md
-        LICENSE.md
+        LICENSE
         CHANGELOG.md
       ],
       licenses: ["MIT"],
