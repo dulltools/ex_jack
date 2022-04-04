@@ -53,14 +53,14 @@ defmodule ExJack.Server do
   through JACK.
 
   ## Parameters
-   - name: Used to name the GenServer AND the JACK node (suffixed with `:in` and `:out`)
+   - name: Used to name the JACK node (suffixed with `:in` and `:out`)
 
    e.g. If you pass `%{name: "HelloWorld"}`, you can interface with this
    connection within JACK through `HelloWorld:in` and `HelloWorld:out`.
   """
   @spec start_link(options_t) :: GenServer.server()
-  def start_link(%{name: name} = opts) do
-    GenServer.start_link(__MODULE__, opts, name: String.to_atom(name))
+  def start_link(%{name: _name} = opts) do
+    GenServer.start_link(__MODULE__, opts, name: __MODULE__)
   end
 
   @doc """
