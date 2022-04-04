@@ -44,3 +44,14 @@ The first three are necessary to make this library useable beyond hobby projects
 - [ ] MCU demo
 - [ ] Improve documentation with additional examples
 - [ ] Autocorrection for xruns
+
+## Dev
+### Releases
+Taken from https://hexdocs.pm/rustler_precompiled/precompilation_guide.html#the-release-flow
+```
+    release a new tag
+    push the code to your repository with the new tag: git push origin main --tags
+    wait for all NIFs to be built
+    run the mix rustler_precompiled.download task (with the flag --all)
+    release the package to Hex.pm.
+```
