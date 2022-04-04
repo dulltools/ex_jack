@@ -2,7 +2,7 @@ defmodule ExJack.MixProject do
   use Mix.Project
 
   @source_url "https://github.com/fraihaav/ex_jack"
-  @version "0.0.1"
+  @version "0.1.0"
   @description "JACK audio interface for Elixir using Rustler-based NIF."
 
   def project do
