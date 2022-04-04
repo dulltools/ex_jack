@@ -38,7 +38,11 @@ defmodule ExJack.Server do
   @type frames_t :: list(float())
   @type output_func_t :: (Range.t() -> frames_t)
   @type input_func_t :: (frames_t -> any())
-  @type options_t :: %{name: String.t()}
+  @type options_t :: %{
+    name: String.t(),
+    use_callback: boolean(),
+    auto_connect: boolean(),
+  }
 
   @doc """
   Start the server.
@@ -88,7 +92,6 @@ defmodule ExJack.Server do
   end
 
   @impl true
-  @spec init(options_t) :: {:ok, map()}
   def init(opts) do
     {:ok, handler, shutdown_handler, _opts} = ExJack.Native.start(opts)
 
