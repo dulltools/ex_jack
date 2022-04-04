@@ -5,7 +5,9 @@ use rustler::{Atom, Encoder, Env, Error, NifMap, OwnedEnv, ResourceArc, Term};
 use std::sync::{mpsc, Mutex};
 use std::{thread, time};
 
-pub struct SenderChannel(Mutex<mpsc::Sender<Vec<f32>>>);
+type Sample = f32;
+
+pub struct SenderChannel(Mutex<mpsc::Sender<Vec<Sample>>>);
 pub struct ShutdownChannel(Mutex<Option<mpsc::Sender<()>>>);
 type StartResult = Result<
     (
@@ -45,10 +47,12 @@ pub fn _start(env: Env, config: Config) -> StartResult {
         .register_port("out", jack::AudioOut::default())
         .unwrap();
 
+    let in_port = client.register_port("in", jack::AudioIn::default()).unwrap();
+
     let pid = env.pid();
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
-    let (frames_tx, frames_rx) = mpsc::channel::<Vec<f32>>();
+    let (frames_tx, frames_rx) = mpsc::channel::<Vec<Sample>>();
 
     let use_callback = config.use_callback;
     let process = jack::ClosureProcessHandler::new(
@@ -61,10 +65,19 @@ pub fn _start(env: Env, config: Config) -> StartResult {
                 });
             }
 
-            let out = out_port.as_mut_slice(ps);
+            let in_frames = in_port.as_slice(ps);
+
+            if in_frames.len() > 0 {
+                let mut env = OwnedEnv::new();
+                env.send_and_clear(&pid, move |env| {
+                    (atoms::in_frames(), in_frames).encode(env)
+                });
+            }
+
+            let out_frames = out_port.as_mut_slice(ps);
 
             while let Ok(f) = frames_rx.try_recv() {
-                out.clone_from_slice(&f);
+                out_frames.clone_from_slice(&f);
             }
 
             jack::Control::Continue
@@ -109,7 +122,7 @@ pub fn _start(env: Env, config: Config) -> StartResult {
 }
 
 #[rustler::nif]
-fn send_frames(resource: ResourceArc<SenderChannel>, frames: Vec<f32>) -> Atom {
+fn send_frames(resource: ResourceArc<SenderChannel>, frames: Vec<Sample>) -> Atom {
     let arc = resource.0.lock().unwrap().clone();
     let _ = arc.send(frames);
     atoms::ok()

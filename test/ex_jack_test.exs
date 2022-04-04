@@ -9,19 +9,19 @@ defmodule ExJackTest do
 
   describe "Mixer" do
     test "calls tracks and mixes them together using configurable algorithm" do
-      ExJack.Server.set_callback(&a220/1)
+      ExJack.Server.set_output_func(&a220/1)
       :timer.sleep(1000)
-      ExJack.Server.set_callback(&a440/1)
+      ExJack.Server.set_output_func(&a440/1)
       :timer.sleep(500)
-      ExJack.Server.set_callback(&noop/1)
+      ExJack.Server.set_output_func(&noop/1)
       :timer.sleep(500)
-      ExJack.Server.set_callback(&a220/1)
+      ExJack.Server.set_output_func(&a220/1)
       :timer.sleep(1000)
-      ExJack.Server.set_callback(&a440/1)
+      ExJack.Server.set_output_func(&a440/1)
       :timer.sleep(500)
-      ExJack.Server.set_callback(&noop/1)
+      ExJack.Server.set_output_func(&noop/1)
       :timer.sleep(500)
-      ExJack.Server.set_callback(&a220/1)
+      ExJack.Server.set_output_func(&a220/1)
     end
   end
 
