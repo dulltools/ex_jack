@@ -8,7 +8,7 @@
 
 ```elixir
 defmodule ExJack do
-    use Rustler, otp_app: :ex_jack, crate: "exjack"
+    use Rustler, otp_app: :ex_jack, crate: "ex_jack"
 
     # When your NIF is loaded, it will override this function.
     def add(_a, _b), do: :erlang.nif_error(:nif_not_loaded)

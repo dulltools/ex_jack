@@ -47,7 +47,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "exjack"
+name = "ex_jack"
 version = "0.1.0"
 dependencies = [
  "futures 0.3.21",
