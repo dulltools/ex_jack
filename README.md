@@ -1,5 +1,5 @@
 # ExJack
-JACK interface for Elixir using Rustler-based NIF.
+JACK audio interface for Elixir using Rustler-based NIF.
 
 The purpose of this library is to provide an audio outlet for Elixir through all platforms. However, if you're on Linux, and don't need JACK outright, it's probably preferable to use [ExAlsa](https://github.com/FraihaAV/ex_alsa) and interface with ALSA directly.
 

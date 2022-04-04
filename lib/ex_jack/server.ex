@@ -39,10 +39,10 @@ defmodule ExJack.Server do
   @type output_func_t :: (Range.t() -> frames_t)
   @type input_func_t :: (frames_t -> any())
   @type options_t :: %{
-    name: String.t(),
-    use_callback: boolean(),
-    auto_connect: boolean(),
-  }
+          name: String.t(),
+          use_callback: boolean(),
+          auto_connect: boolean()
+        }
 
   @doc """
   Start the server.

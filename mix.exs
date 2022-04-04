@@ -3,12 +3,14 @@ defmodule ExJack.MixProject do
 
   @source_url "https://github.com/fraihaav/ex_jack"
   @version "0.28.3"
+  @description "JACK audio interface for Elixir using Rustler-based NIF."
 
   def project do
     [
       app: :ex_jack,
       version: @version,
       source_url: @source_url,
+      description: @description,
       elixir: "~> 1.13",
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
