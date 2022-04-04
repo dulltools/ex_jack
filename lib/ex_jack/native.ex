@@ -12,7 +12,15 @@ defmodule ExJack.Native do
   If you are interested in using this library, signatures and usage can be found in `ExJack.Server`.
   """
 
-  use Rustler, otp_app: :ex_jack, crate: "exjack"
+  mix_config = Mix.Project.config()
+  version = mix_config[:version]
+  github_url = mix_config[:source_url]
+
+  use RustlerPrecompiled,
+    otp_app: :ex_jack,
+    base_url: "#{github_url}/releases/download/v#{version}",
+    version: version,
+    force_build: System.get_env("EXJACK_BUILD") in ["1", "true"]
 
   @type options_t :: %{
           name: String.t(),

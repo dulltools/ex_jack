@@ -27,7 +27,7 @@ defmodule ExJackTest do
 
   def sin_freq(time, pitch) do
     radians_per_second = pitch * 2.0 * :math.pi()
-    seconds_per_frame = 1.0 / 44100.0
+    seconds_per_frame = 1.0 / 44_100.0
 
     Enum.map(time, fn i ->
       :math.sin(radians_per_second * i * seconds_per_frame)
