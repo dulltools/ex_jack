@@ -33,7 +33,7 @@ defmodule ExJack.MixProject do
     [
       # {:elixir_make, "~> 0.6", runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
-      {:ex_doc, "~> 0.22.1", only: :dev, runtime: false},
+      {:ex_doc, "~> 0.28.3", only: :dev, runtime: false},
       {:benchee, "~> 1.0", only: [:test, :dev]},
       {:rustler_precompiled, "~> 0.3"},
       {:credo, "~> 1.3", only: [:dev, :test], runtime: false}
