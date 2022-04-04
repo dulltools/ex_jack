@@ -57,6 +57,19 @@ defmodule ExJack.MixProject do
 
   defp package do
     [
+      files: ~w[
+        lib
+        native/ex_jack/src
+        native/ex_jack/Cargo.*
+        native/ex_jack/README.md
+        native/ex_jack/.cargo
+        checksum-Elixir.Wasmex.Native.exs
+        .formatter.exs
+        mix.exs
+        README.md
+        LICENSE.md
+        CHANGELOG.md
+      ],
       licenses: ["MIT"],
       maintainers: ["Adrian Fraiha"],
       links: %{
