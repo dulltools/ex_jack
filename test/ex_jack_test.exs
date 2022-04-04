@@ -3,7 +3,7 @@ defmodule ExJackTest do
   doctest ExJack
 
   setup do
-    server = start_supervised!({ExJack.Server, %{name: "ExJackTest"}})
+    start_supervised!({ExJack.Server, %{name: "ExJackTest"}})
     :ok
   end
 
