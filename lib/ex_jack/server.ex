@@ -24,6 +24,8 @@ defmodule ExJack.Server do
   defstruct handler: nil,
             shutdown_handler: nil,
             current_frame: 0,
+            buffer_size: 0,
+            sample_rate: 44100,
             output_func: &ExJack.Server.noop/1,
             input_func: &ExJack.Server.noop/1
 
@@ -31,10 +33,14 @@ defmodule ExJack.Server do
           handler: any(),
           shutdown_handler: any(),
           current_frame: pos_integer(),
+          buffer_size: buffer_size_t,
+          sample_rate: sample_rate_t,
           output_func: output_func_t,
           input_func: input_func_t
         }
 
+  @type sample_rate_t :: pos_integer()
+  @type buffer_size_t :: pos_integer()
   @type frames_t :: list(float())
   @type output_func_t :: (Range.t() -> frames_t)
   @type input_func_t :: (frames_t -> any())
@@ -72,6 +78,22 @@ defmodule ExJack.Server do
   end
 
   @doc """
+  Returns the size of JACK's buffer
+  """
+  @spec get_buffer_size() :: buffer_size_t()
+  def get_buffer_size() do
+    GenServer.call(__MODULE__, :buffer_size)
+  end
+
+  @doc """
+  Returns the sample rate in Hz that JACK is operating with
+  """
+  @spec get_sample_rate() :: sample_rate_t()
+  def get_sample_rate() do
+    GenServer.call(__MODULE__, :sample_rate)
+  end
+
+  @doc """
   Set the callback function that will receive input data from JACK each cycle.
 
   The output of the function is currently not used for anything.
@@ -93,9 +115,29 @@ defmodule ExJack.Server do
 
   @impl true
   def init(opts) do
-    {:ok, handler, shutdown_handler, _opts} = ExJack.Native.start(opts)
+    {:ok, handler, shutdown_handler, %{buffer_size: buffer_size, sample_rate: sample_rate}} =
+      ExJack.Native.start(opts)
 
-    {:ok, %__MODULE__{handler: handler, shutdown_handler: shutdown_handler, current_frame: 0}}
+    {:ok,
+     %__MODULE__{
+       handler: handler,
+       shutdown_handler: shutdown_handler,
+       current_frame: 0,
+       buffer_size: buffer_size,
+       sample_rate: sample_rate
+     }}
+  end
+
+  @impl true
+  @spec handle_call(:buffer_size, any(), t()) :: {:reply, buffer_size_t(), t()}
+  def handle_call(:buffer_size, _from, %{buffer_size: buffer_size} = state) do
+    {:reply, buffer_size, state}
+  end
+
+  @impl true
+  @spec handle_call(:sample_rate, any(), t()) :: {:reply, sample_rate_t(), t()}
+  def handle_call(:sample_rate, _from, %{sample_rate: sample_rate} = state) do
+    {:reply, sample_rate, state}
   end
 
   @impl true
@@ -105,9 +147,9 @@ defmodule ExJack.Server do
   end
 
   @impl true
-  @spec handle_cast({:set_input_func, output_func_t}, t()) :: {:noreply, t()}
-  def handle_cast({:set_input_func, output_func}, state) do
-    {:noreply, %{state | input_func: output_func}}
+  @spec handle_cast({:set_input_func, input_func_t}, t()) :: {:noreply, t()}
+  def handle_cast({:set_input_func, input_func}, state) do
+    {:noreply, %{state | input_func: input_func}}
   end
 
   @impl true
