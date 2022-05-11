@@ -20,6 +20,7 @@ defmodule ExJack.Server do
   """
 
   use GenServer
+  require Logger
 
   defstruct handler: nil,
             shutdown_handler: nil,
@@ -134,8 +135,6 @@ defmodule ExJack.Server do
     {:reply, buffer_size, state}
   end
 
-  @impl true
-  @spec handle_call(:sample_rate, any(), t()) :: {:reply, sample_rate_t(), t()}
   def handle_call(:sample_rate, _from, %{sample_rate: sample_rate} = state) do
     {:reply, sample_rate, state}
   end
@@ -169,7 +168,7 @@ defmodule ExJack.Server do
   end
 
   @impl true
-  @spec handle_cast({:request, pos_integer()}, t()) :: {:noreply, __MODULE__.t()}
+  @spec handle_info({:request, pos_integer()}, t()) :: {:noreply, __MODULE__.t()}
   def handle_info(
         {:request, requested_frames},
         %{current_frame: current_frame, output_func: output_func} = state
@@ -178,6 +177,97 @@ defmodule ExJack.Server do
     send_frames(output_func.(current_frame..end_frames))
 
     {:noreply, %{state | current_frame: end_frames + 1}}
+  end
+
+  @impl true
+  @spec handle_info({:sample_rate, pos_integer()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:sample_rate, sample_rate},
+        state
+      ) do
+    Logger.debug("JACK Event: Sample rate updated #{sample_rate}")
+    {:noreply, %{state | sample_rate: sample_rate}}
+  end
+
+  @impl true
+  @spec handle_info({:ports_connected, String.t(), String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:ports_connected, port_id_a, port_id_b},
+        state
+      ) do
+    Logger.debug("JACK Event: Ports connected #{port_id_a} #{port_id_b}")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info({:ports_disconnected, String.t(), String.t()}, t()) ::
+          {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:ports_disconnected, port_id_a, port_id_b},
+        state
+      ) do
+    Logger.debug("JACK Event: Ports disconnected #{port_id_a} #{port_id_b}")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info(:xrun, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        :xrun,
+        state
+      ) do
+    Logger.debug("JACK Event: XRUN occured")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info({:port_register, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:port_register, port_id, port_name},
+        state
+      ) do
+    Logger.debug("JACK Event: Port registered #{port_id} #{port_name}")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info({:port_unregister, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:port_unregister, port_id},
+        state
+      ) do
+    Logger.debug("JACK Event: Port unregistered #{port_id}")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info({:client_register, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:client_register, client_id},
+        state
+      ) do
+    Logger.debug("JACK Event: Client registered #{client_id}")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info({:client_unregister, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:client_unregister, client_id},
+        state
+      ) do
+    Logger.debug("JACK Event: Client unregistered #{client_id}")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info(:shutdown, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        :shutdown,
+        state
+      ) do
+    Logger.debug("JACK Event: Shutting down")
+    {:noreply, state}
   end
 
   @impl true

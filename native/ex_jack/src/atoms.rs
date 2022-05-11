@@ -2,5 +2,14 @@ rustler::atoms! {
     ok,
     error,
     request,
-    in_frames
+    in_frames,
+    sample_rate,
+    ports_connected,
+    ports_disconnected,
+    port_register,
+    port_unregister,
+    client_register,
+    client_unregister,
+    shutdown,
+    xrun,
 }
