@@ -35,8 +35,10 @@ defmodule ExJack.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev], runtime: false},
       {:ex_doc, "~> 0.28.3", only: :dev, runtime: false},
       {:benchee, "~> 1.0", only: [:test, :dev]},
-      {:rustler_precompiled, "~> 0.3"},
-      {:credo, "~> 1.3", only: [:dev, :test], runtime: false}
+      {:rustler_precompiled, path: "../rustler_precompiled"},
+      {:credo, "~> 1.3", only: [:dev, :test], runtime: false},
+      # {:rustler, ">= 0.0.0", only: [:dev, :test]},
+      {:rustler, ">= 0.0.0", optional: true}
     ]
   end
 

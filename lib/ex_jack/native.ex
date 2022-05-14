@@ -19,8 +19,7 @@ defmodule ExJack.Native do
   use RustlerPrecompiled,
     otp_app: :ex_jack,
     base_url: "#{github_url}/releases/download/v#{version}",
-    version: version,
-    force_build: System.get_env("EXJACK_BUILD") in ["1", "true"]
+    version: version
 
   @type options_t :: %{
           name: String.t(),
