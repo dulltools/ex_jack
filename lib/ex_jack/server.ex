@@ -28,7 +28,9 @@ defmodule ExJack.Server do
             buffer_size: 0,
             sample_rate: 44100,
             output_func: &ExJack.Server.noop/1,
-            input_func: &ExJack.Server.noop/1
+            input_func: &ExJack.Server.noop/1,
+            ports: MapSet.new(),
+            clients: MapSet.new()
 
   @type t :: %__MODULE__{
           handler: any(),
@@ -37,9 +39,20 @@ defmodule ExJack.Server do
           buffer_size: buffer_size_t,
           sample_rate: sample_rate_t,
           output_func: output_func_t,
-          input_func: input_func_t
+          input_func: input_func_t,
+          ports: %{
+            port_id_t: %{
+              # does not include client name
+              name: String.t(),
+              client: client_id_t,
+              connections: MapSet.t(port_id_t)
+            }
+          },
+          clients: MapSet.t(client_id_t)
         }
 
+  @type port_id_t :: pos_integer()
+  @type client_id_t :: String.t()
   @type sample_rate_t :: pos_integer()
   @type buffer_size_t :: pos_integer()
   @type frames_t :: list(float())
@@ -130,6 +143,25 @@ defmodule ExJack.Server do
   end
 
   @impl true
+  @spec handle_call({:connect, options_t}, any(), t()) ::
+          {:reply, {:ok, t()}} | {:reply, {:error, String.t()}}
+  def handle_call({:connect, opts}, _from, state) do
+    {:ok, handler, shutdown_handler, %{buffer_size: buffer_size, sample_rate: sample_rate}} =
+      ExJack.Native.start(opts)
+
+    # TODO if already connected, error out, if Native.start errors out, error out...
+    {:reply,
+     {:ok,
+      %__MODULE__{
+        handler: handler,
+        shutdown_handler: shutdown_handler,
+        current_frame: 0,
+        buffer_size: buffer_size,
+        sample_rate: sample_rate
+      }}}
+  end
+
+  @impl true
   @spec handle_call(:buffer_size, any(), t()) :: {:reply, buffer_size_t(), t()}
   def handle_call(:buffer_size, _from, %{buffer_size: buffer_size} = state) do
     {:reply, buffer_size, state}
@@ -193,10 +225,11 @@ defmodule ExJack.Server do
   @spec handle_info({:ports_connected, String.t(), String.t()}, t()) :: {:noreply, __MODULE__.t()}
   def handle_info(
         {:ports_connected, port_id_a, port_id_b},
-        state
+        %{ports: ports} = state
       ) do
     Logger.debug("JACK Event: Ports connected #{port_id_a} #{port_id_b}")
-    {:noreply, state}
+    ports = update_in(ports, [Access.key!(port_id_a), :connections], &MapSet.put(&1, port_id_b))
+    {:noreply, %{state | ports: ports}}
   end
 
   @impl true
@@ -204,10 +237,14 @@ defmodule ExJack.Server do
           {:noreply, __MODULE__.t()}
   def handle_info(
         {:ports_disconnected, port_id_a, port_id_b},
-        state
+        %{ports: ports} = state
       ) do
     Logger.debug("JACK Event: Ports disconnected #{port_id_a} #{port_id_b}")
-    {:noreply, state}
+
+    ports =
+      update_in(ports, [Access.key!(port_id_a), :connections], &MapSet.delete(&1, port_id_b))
+
+    {:noreply, %{state | ports: ports}}
   end
 
   @impl true
@@ -224,30 +261,56 @@ defmodule ExJack.Server do
   @spec handle_info({:port_register, String.t()}, t()) :: {:noreply, __MODULE__.t()}
   def handle_info(
         {:port_register, port_id, port_name},
-        state
+        %{ports: ports} = state
       ) do
     Logger.debug("JACK Event: Port registered #{port_id} #{port_name}")
-    {:noreply, state}
+
+    [client_name, short_name] = String.split(port_name, ":")
+
+    ports =
+      Map.put(ports, port_id, %{
+        connections: MapSet.new(),
+        name: short_name,
+        client: client_name
+      })
+
+    {:noreply, %{state | ports: ports}}
   end
 
   @impl true
   @spec handle_info({:port_unregister, String.t()}, t()) :: {:noreply, __MODULE__.t()}
   def handle_info(
         {:port_unregister, port_id},
-        state
+        %{ports: ports} = state
       ) do
     Logger.debug("JACK Event: Port unregistered #{port_id}")
-    {:noreply, state}
+
+    ports = Map.delete(ports, port_id)
+
+    ports =
+      for {key, %{connections: connections} = val} <- ports, into: %{} do
+        if MapSet.member?(connections, port_id) do
+          {key,
+           %{
+             val
+             | connections: MapSet.delete(connections, port_id)
+           }}
+        else
+          {key, val}
+        end
+      end
+
+    {:noreply, %{state | ports: ports}}
   end
 
   @impl true
   @spec handle_info({:client_register, String.t()}, t()) :: {:noreply, __MODULE__.t()}
   def handle_info(
         {:client_register, client_id},
-        state
+        %{clients: clients} = state
       ) do
     Logger.debug("JACK Event: Client registered #{client_id}")
-    {:noreply, state}
+    {:noreply, %{state | clients: MapSet.put(clients, client_id)}}
   end
 
   @impl true
@@ -257,6 +320,7 @@ defmodule ExJack.Server do
         state
       ) do
     Logger.debug("JACK Event: Client unregistered #{client_id}")
+
     {:noreply, state}
   end
 
@@ -267,7 +331,10 @@ defmodule ExJack.Server do
         state
       ) do
     Logger.debug("JACK Event: Shutting down")
-    {:noreply, state}
+
+    # TODO here we stop the GenServer if JACK is shutdown, explore a way to reconnect the current process
+    # to JACK instead of shutting it down.
+    {:stop, :normal, state}
   end
 
   @impl true
