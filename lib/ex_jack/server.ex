@@ -13,13 +13,14 @@ defmodule ExJack.Server do
   Latency will obviously vary and if you have a busy machine, expect xruns. xruns,
   which is shorthand for overruns and underruns, occur when you either send too
   many frames or not enough frames. If the CPU is busy doing some other work
-  and neglects to send frames to the soundcard, the soundcard buffer runs out of frames 
-  to play. An underrun will then occur. You could send too many frames to the 
+  and neglects to send frames to the soundcard, the soundcard buffer runs out of frames
+  to play. An underrun will then occur. You could send too many frames to the
   soundcard. If you send more than its buffers can hold, the data will be lost. This
   is an overrun.
   """
 
   use GenServer
+  require Logger
 
   defstruct handler: nil,
             shutdown_handler: nil,
@@ -27,7 +28,9 @@ defmodule ExJack.Server do
             buffer_size: 0,
             sample_rate: 44100,
             output_func: &ExJack.Server.noop/1,
-            input_func: &ExJack.Server.noop/1
+            input_func: &ExJack.Server.noop/1,
+            ports: MapSet.new(),
+            clients: MapSet.new()
 
   @type t :: %__MODULE__{
           handler: any(),
@@ -36,7 +39,23 @@ defmodule ExJack.Server do
           buffer_size: buffer_size_t,
           sample_rate: sample_rate_t,
           output_func: output_func_t,
-          input_func: input_func_t
+          input_func: input_func_t,
+          ports: ports_t,
+          clients: MapSet.t(client_name_t)
+        }
+
+  # `client_name_t:port_short_name_t`
+  @type port_name_t :: String.t()
+  @type port_short_name_t :: String.t()
+  @type client_name_t :: String.t()
+  @type port_t :: %{
+          name: port_short_name_t,
+          client: client_name_t,
+          connections: MapSet.t(port_name_t)
+        }
+
+  @type ports_t :: %{
+          port_name_t: port_t
         }
 
   @type sample_rate_t :: pos_integer()
@@ -94,6 +113,14 @@ defmodule ExJack.Server do
   end
 
   @doc """
+  Returns list of ports with their connections
+  """
+  @spec get_ports() :: ports_t
+  def get_ports() do
+    GenServer.call(__MODULE__, :ports)
+  end
+
+  @doc """
   Set the callback function that will receive input data from JACK each cycle.
 
   The output of the function is currently not used for anything.
@@ -115,7 +142,7 @@ defmodule ExJack.Server do
 
   @impl true
   def init(opts) do
-    {:ok, handler, shutdown_handler, %{buffer_size: buffer_size, sample_rate: sample_rate}} =
+    {:ok, handler, shutdown_handler, ports, %{buffer_size: buffer_size, sample_rate: sample_rate}} =
       ExJack.Native.start(opts)
 
     {:ok,
@@ -124,7 +151,19 @@ defmodule ExJack.Server do
        shutdown_handler: shutdown_handler,
        current_frame: 0,
        buffer_size: buffer_size,
-       sample_rate: sample_rate
+       sample_rate: sample_rate,
+       ports:
+         Enum.map(ports, fn name ->
+           {name, String.split(name, ":")}
+         end)
+         |> Map.new(fn {name, [client, short_name]} ->
+           {name,
+            %{
+              client: client,
+              name: short_name,
+              connections: MapSet.new()
+            }}
+         end)
      }}
   end
 
@@ -138,6 +177,12 @@ defmodule ExJack.Server do
   @spec handle_call(:sample_rate, any(), t()) :: {:reply, sample_rate_t(), t()}
   def handle_call(:sample_rate, _from, %{sample_rate: sample_rate} = state) do
     {:reply, sample_rate, state}
+  end
+
+  @impl true
+  @spec handle_call(:ports, any(), t()) :: {:reply, ports_t(), t()}
+  def handle_call(:ports, _from, %{ports: ports} = state) do
+    {:reply, ports, state}
   end
 
   @impl true
@@ -169,7 +214,7 @@ defmodule ExJack.Server do
   end
 
   @impl true
-  @spec handle_cast({:request, pos_integer()}, t()) :: {:noreply, __MODULE__.t()}
+  @spec handle_info({:request, pos_integer()}, t()) :: {:noreply, __MODULE__.t()}
   def handle_info(
         {:request, requested_frames},
         %{current_frame: current_frame, output_func: output_func} = state
@@ -178,6 +223,133 @@ defmodule ExJack.Server do
     send_frames(output_func.(current_frame..end_frames))
 
     {:noreply, %{state | current_frame: end_frames + 1}}
+  end
+
+  @impl true
+  @spec handle_info({:sample_rate, pos_integer()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:sample_rate, sample_rate},
+        state
+      ) do
+    Logger.debug("JACK Event: Sample rate updated #{sample_rate}")
+    {:noreply, %{state | sample_rate: sample_rate}}
+  end
+
+  @impl true
+  @spec handle_info({:ports_connected, String.t(), String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:ports_connected, port_name_a, port_name_b},
+        %{ports: ports} = state
+      ) do
+    Logger.debug("JACK Event: Ports connected #{port_name_a} #{port_name_b}")
+
+    ports =
+      update_in(ports, [Access.key!(port_name_a), :connections], &MapSet.put(&1, port_name_b))
+
+    {:noreply, %{state | ports: ports}}
+  end
+
+  @impl true
+  @spec handle_info({:ports_disconnected, String.t(), String.t()}, t()) ::
+          {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:ports_disconnected, port_name_a, port_name_b},
+        %{ports: ports} = state
+      ) do
+    Logger.debug("JACK Event: Ports disconnected #{port_name_a} #{port_name_b}")
+
+    ports =
+      update_in(ports, [Access.key!(port_name_a), :connections], &MapSet.delete(&1, port_name_b))
+
+    {:noreply, %{state | ports: ports}}
+  end
+
+  @impl true
+  @spec handle_info(:xrun, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        :xrun,
+        state
+      ) do
+    Logger.debug("JACK Event: XRUN occured")
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info({:port_register, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:port_register, port_id, port_name},
+        %{ports: ports} = state
+      ) do
+    Logger.debug("JACK Event: Port registered #{port_id} #{port_name}")
+
+    [client_name, short_name] = String.split(port_name, ":")
+
+    ports =
+      Map.put(ports, port_name, %{
+        connections: MapSet.new(),
+        name: short_name,
+        client: client_name
+      })
+
+    {:noreply, %{state | ports: ports}}
+  end
+
+  @impl true
+  @spec handle_info({:port_unregister, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:port_unregister, port_name},
+        %{ports: ports} = state
+      ) do
+    Logger.debug("JACK Event: Port unregistered #{port_name}")
+
+    ports = Map.delete(ports, port_name)
+
+    ports =
+      for {key, %{connections: connections} = val} <- ports, into: %{} do
+        if MapSet.member?(connections, port_name) do
+          {key,
+           %{
+             val
+             | connections: MapSet.delete(connections, port_name)
+           }}
+        else
+          {key, val}
+        end
+      end
+
+    {:noreply, %{state | ports: ports}}
+  end
+
+  @impl true
+  @spec handle_info({:client_register, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:client_register, client_id},
+        %{clients: clients} = state
+      ) do
+    Logger.debug("JACK Event: Client registered #{client_id}")
+    {:noreply, %{state | clients: MapSet.put(clients, client_id)}}
+  end
+
+  @impl true
+  @spec handle_info({:client_unregister, String.t()}, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        {:client_unregister, client_id},
+        state
+      ) do
+    Logger.debug("JACK Event: Client unregistered #{client_id}")
+
+    {:noreply, state}
+  end
+
+  @impl true
+  @spec handle_info(:shutdown, t()) :: {:noreply, __MODULE__.t()}
+  def handle_info(
+        :shutdown,
+        state
+      ) do
+    Logger.debug("JACK Event: Shutting down")
+
+    {:stop, :normal, state}
   end
 
   @impl true
