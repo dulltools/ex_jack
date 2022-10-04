@@ -53,8 +53,8 @@ jobs:
     - name: Install prerequisites
       run: |
         case ${{ matrix.job.target }} in
-          arm-unknown-linux-*) sudo apt-get -y update ; sudo apt-get -y install gcc-arm-linux-gnueabihf libjack-dev;;
-          aarch64-unknown-linux-gnu) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu libjack-dev;;
+          arm-unknown-linux-*) sudo apt-get -y update ; sudo apt-get -y install gcc-arm-linux-gnueabihf libjack-jackd2-dev;;
+          aarch64-unknown-linux-gnu) sudo apt-get -y update ; sudo apt-get -y install gcc-aarch64-linux-gnu libjack-jackd2-dev;;
         esac
 
     - name: Extract crate information
