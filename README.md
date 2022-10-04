@@ -1,4 +1,12 @@
 # ExJack
+
+[![Elixir CI](https://github.com/dulltools/ex_jack/actions/workflows/elixir.yml/badge.svg)](https://github.com/dulltools/ex_jack/actions/workflows/elixir.yml)
+[![Module Version](https://img.shields.io/hexpm/v/ex_jack.svg)](https://hex.pm/packages/ex_jack)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/ex_jack/)
+[![Total Download](https://img.shields.io/hexpm/dt/ex_jack.svg)](https://hex.pm/packages/ex_jack)
+[![License](https://img.shields.io/hexpm/l/ex_jack.svg)](https://github.com/dulltools/ex_jack/blob/main/LICENSE.md)
+[![Last Updated](https://img.shields.io/github/last-commit/dulltools/ex_jack.svg)](https://github.com/dulltools/ex_jack/commits/main)
+
 JACK audio interface for Elixir using Rustler-based NIF.
 
 The purpose of this library is to provide an audio outlet for Elixir through all platforms. However, if you're on Linux, and don't need JACK outright, it's probably preferable to use [ExAlsa](https://github.com/FraihaAV/ex_alsa) and interface with ALSA directly.
