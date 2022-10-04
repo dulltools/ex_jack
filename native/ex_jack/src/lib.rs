@@ -15,6 +15,7 @@ type StartResult = Result<
         Atom,
         ResourceArc<SendFramesChannel>,
         ResourceArc<ShutdownChannel>,
+        Vec<String>,
         Pcm,
     ),
     Error,
@@ -43,6 +44,8 @@ pub fn load(env: Env, _: Term) -> bool {
 pub fn _start(env: Env, config: Config) -> StartResult {
     let (client, _status) =
         jack::Client::new(&config.name, jack::ClientOptions::NO_START_SERVER).unwrap();
+
+    let already_connected_ports = client.ports(Some(".*"), None, jack::PortFlags::empty());
 
     let mut out_port = client
         .register_port("out", jack::AudioOut::default())
@@ -117,6 +120,7 @@ pub fn _start(env: Env, config: Config) -> StartResult {
         atoms::ok(),
         sender_ref,
         shutdown_ref,
+        already_connected_ports,
         Pcm {
             buffer_size,
             sample_rate,
@@ -167,7 +171,12 @@ impl jack::NotificationHandler for Notifications {
             let mut env = OwnedEnv::new();
             if is_reg {
                 env.send_and_clear(&self.env_pid, move |env| {
-                    (atoms::port_register(), port_id, port.name().unwrap_or("<unknown>".to_owned())).encode(env)
+                    (
+                        atoms::port_register(),
+                        port_id,
+                        port.name().unwrap_or("<unknown>".to_owned()),
+                    )
+                        .encode(env)
                 });
             } else {
                 env.send_and_clear(&self.env_pid, move |env| {
@@ -179,19 +188,30 @@ impl jack::NotificationHandler for Notifications {
 
     fn ports_connected(
         &mut self,
-        _: &jack::Client,
+        client: &jack::Client,
         port_id_a: jack::PortId,
         port_id_b: jack::PortId,
         are_connected: bool,
     ) {
         let mut env = OwnedEnv::new();
+
+        let port_a = match client.port_by_id(port_id_a) {
+            Some(port) => port.name().unwrap_or("<unknown>".to_string()),
+            _ => "error".to_string(),
+        };
+
+        let port_b = match client.port_by_id(port_id_b) {
+            Some(port) => port.name().unwrap_or("<unknown>".to_string()),
+            _ => "error".to_string(),
+        };
+
         if are_connected {
             env.send_and_clear(&self.env_pid, move |env| {
-                (atoms::ports_connected(), port_id_a, port_id_b).encode(env)
+                (atoms::ports_connected(), port_a, port_b).encode(env)
             });
         } else {
             env.send_and_clear(&self.env_pid, move |env| {
-                (atoms::ports_disconnected(), port_id_a, port_id_b).encode(env)
+                (atoms::ports_disconnected(), port_a, port_b).encode(env)
             });
         }
     }

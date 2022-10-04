@@ -31,7 +31,7 @@ This is an example of piping your capture to output, be wary of feedback. You ha
 ```elixir
 $ iex -s mix
 > ExJack.Server.start_link(%{name: "ExJackDemo"})
-> ExJack.Server.set_input_func(fn frames -> ExJack.Server.send_frames(frames) end )
+> ExJack.Server.set_input_func(fn frames -> ExJack.Server.send_frames(frames) end)
 ```
 
 ## TODO
