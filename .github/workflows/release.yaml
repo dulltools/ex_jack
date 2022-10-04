@@ -160,3 +160,9 @@ jobs:
         files: |
           ${{ steps.rename.outputs.LIB_FINAL_PATH }}
       if: startsWith(github.ref, 'refs/tags/')
+
+    - name: Publish to Hex.pm
+      uses: erlangpack/github-action@v1
+      env:
+        HEX_API_KEY: ${{ secrets.HEX_API_KEY }}
+      if: startsWith(github.ref, 'refs/tags/')
