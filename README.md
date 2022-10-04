@@ -1,6 +1,6 @@
 # ExJack
 
-[![Elixir CI](https://github.com/dulltools/ex_jack/actions/workflows/elixir.yml/badge.svg)](https://github.com/dulltools/ex_jack/actions/workflows/elixir.yml)
+[![Elixir CI](https://github.com/dulltools/ex_jack/actions/workflows/release.yaml/badge.svg)](https://github.com/dulltools/ex_jack/actions/workflows/release.yaml)
 [![Module Version](https://img.shields.io/hexpm/v/ex_jack.svg)](https://hex.pm/packages/ex_jack)
 [![Hex Docs](https://img.shields.io/badge/hex-docs-lightgreen.svg)](https://hexdocs.pm/ex_jack/)
 [![Total Download](https://img.shields.io/hexpm/dt/ex_jack.svg)](https://hex.pm/packages/ex_jack)
