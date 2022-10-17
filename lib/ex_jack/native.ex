@@ -39,6 +39,8 @@ defmodule ExJack.Native do
   end
 
   def _start(_opts), do: error()
+  def connect_ports(_resource, _port_from_name, _port_to_name), do: error()
+  def disconnect_ports(_resource, _port_from_name, _port_to_name), do: error()
   def stop(_resource), do: error()
   def send_frames(_resource, _frames), do: error()
 
