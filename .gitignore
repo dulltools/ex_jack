@@ -10,6 +10,8 @@ erl_crash.dump
 .elixir_ls/
 /tmp
 
+.tool-versions
+
 # Ignore package tarball (built via "mix hex.build").
 ex_jack-*.tar
 
