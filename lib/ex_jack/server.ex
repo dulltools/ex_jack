@@ -24,6 +24,7 @@ defmodule ExJack.Server do
 
   defstruct handler: nil,
             shutdown_handler: nil,
+            port_handler: nil,
             current_frame: 0,
             buffer_size: 0,
             sample_rate: 44100,
@@ -35,6 +36,7 @@ defmodule ExJack.Server do
   @type t :: %__MODULE__{
           handler: any(),
           shutdown_handler: any(),
+          port_handler: any(),
           current_frame: pos_integer(),
           buffer_size: buffer_size_t,
           sample_rate: sample_rate_t,
@@ -121,6 +123,22 @@ defmodule ExJack.Server do
   end
 
   @doc """
+  Connect an output port to an input port
+  """
+  @spec connect_ports(port_t, port_t) :: any()
+  def connect_ports(port_from_name, port_to_name) do
+    GenServer.call(__MODULE__, {:connect_ports, port_from_name, port_to_name})
+  end
+
+  @doc """
+  Disconnect an output port to an input port
+  """
+  @spec disconnect_ports(port_t, port_t) :: any()
+  def disconnect_ports(port_from_name, port_to_name) do
+    GenServer.call(__MODULE__, {:disconnect_ports, port_from_name, port_to_name})
+  end
+
+  @doc """
   Set the callback function that will receive input data from JACK each cycle.
 
   The output of the function is currently not used for anything.
@@ -142,13 +160,14 @@ defmodule ExJack.Server do
 
   @impl true
   def init(opts) do
-    {:ok, handler, shutdown_handler, ports, %{buffer_size: buffer_size, sample_rate: sample_rate}} =
-      ExJack.Native.start(opts)
+    {:ok, handler, shutdown_handler, port_handler, ports,
+     %{buffer_size: buffer_size, sample_rate: sample_rate}} = ExJack.Native.start(opts)
 
     {:ok,
      %__MODULE__{
        handler: handler,
        shutdown_handler: shutdown_handler,
+       port_handler: port_handler,
        current_frame: 0,
        buffer_size: buffer_size,
        sample_rate: sample_rate,
@@ -183,6 +202,38 @@ defmodule ExJack.Server do
   @spec handle_call(:ports, any(), t()) :: {:reply, ports_t(), t()}
   def handle_call(:ports, _from, %{ports: ports} = state) do
     {:reply, ports, state}
+  end
+
+  @impl true
+  @spec handle_call({:connect_ports, port_t, port_t}, GenServer.from(), t()) ::
+          {:reply, ports_t(), t()}
+  def handle_call(
+        {:connect_ports, port_from_name, port_to_name},
+        _from,
+        %{ports: ports, port_handler: port_handler} = state
+      ) do
+    if Map.has_key?(ports, port_from_name) and Map.has_key?(ports, port_to_name) do
+      ret = ExJack.Native.connect_ports(port_handler, port_from_name, port_to_name)
+      {:reply, ret, state}
+    else
+      {:reply, {:error, :ports_not_found}, state}
+    end
+  end
+
+  @impl true
+  @spec handle_call({:disconnect_ports, port_t, port_t}, GenServer.from(), t()) ::
+          {:reply, ports_t(), t()}
+  def handle_call(
+        {:disconnect_ports, port_from_name, port_to_name},
+        _from,
+        %{ports: ports, port_handler: port_handler} = state
+      ) do
+    if Map.has_key?(ports, port_from_name) and Map.has_key?(ports, port_to_name) do
+      ret = ExJack.Native.disconnect_ports(port_handler, port_from_name, port_to_name)
+      {:reply, ret, state}
+    else
+      {:reply, {:error, :ports_not_found}, state}
+    end
   end
 
   @impl true

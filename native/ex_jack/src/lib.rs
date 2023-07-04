@@ -9,12 +9,14 @@ type Sample = f32;
 
 pub struct SendFramesChannel(Mutex<mpsc::Sender<Vec<Sample>>>);
 pub struct ShutdownChannel(Mutex<Option<mpsc::Sender<()>>>);
+pub struct PortActionChannel(Mutex<mpsc::Sender<PortAction>>);
 
 type StartResult = Result<
     (
         Atom,
         ResourceArc<SendFramesChannel>,
         ResourceArc<ShutdownChannel>,
+        ResourceArc<PortActionChannel>,
         Vec<String>,
         Pcm,
     ),
@@ -28,6 +30,13 @@ pub struct Pcm {
 }
 
 #[derive(NifMap)]
+pub struct PortAction {
+    pub connect: bool,
+    pub port_from_name: String,
+    pub port_to_name: String,
+}
+
+#[derive(NifMap)]
 pub struct Config {
     pub name: String,
     pub auto_connect: bool,
@@ -37,6 +46,7 @@ pub struct Config {
 pub fn load(env: Env, _: Term) -> bool {
     rustler::resource!(SendFramesChannel, env);
     rustler::resource!(ShutdownChannel, env);
+    rustler::resource!(PortActionChannel, env);
     true
 }
 
@@ -59,6 +69,7 @@ pub fn _start(env: Env, config: Config) -> StartResult {
 
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<()>();
     let (frames_tx, frames_rx) = mpsc::channel::<Vec<Sample>>();
+    let (manage_ports_tx, manage_ports_rx) = mpsc::channel::<>();
 
     let use_callback = config.use_callback;
     let process = jack::ClosureProcessHandler::new(
@@ -107,19 +118,46 @@ pub fn _start(env: Env, config: Config) -> StartResult {
                 .unwrap();
         }
 
-        let ten_seconds = time::Duration::from_secs(10);
-        while let Err(_) = shutdown_rx.try_recv() {
-            thread::sleep(ten_seconds);
+        let poll_interval = time::Duration::from_secs(5);
+        loop {
+            if let Ok(_) = shutdown_rx.try_recv() {
+                break;
+            }
+
+            if let Ok(PortAction {
+                connect,
+                port_from_name,
+                port_to_name
+            }) = manage_ports_rx.try_recv() {
+                if connect {
+                    // TODO at the moment if connecting/disconnecting fails
+                    // the client is not informed.
+                    // See issue https://github.com/dulltools/ex_jack/issues/18
+                    // for possible solutions
+                    let _ = active_client
+                        .as_client()
+                        .connect_ports_by_name(&port_from_name, &port_to_name);
+                } else {
+                    let _ = active_client
+                        .as_client()
+                        .disconnect_ports_by_name(&port_from_name, &port_to_name);
+                }
+
+            }
+
+            thread::sleep(poll_interval);
         }
     });
 
     let shutdown_ref = ResourceArc::new(ShutdownChannel(Mutex::new(Some(shutdown_tx))));
     let sender_ref = ResourceArc::new(SendFramesChannel(Mutex::new(frames_tx)));
+    let manage_ports_ref = ResourceArc::new(PortActionChannel(Mutex::new(manage_ports_tx)));
 
     Ok((
         atoms::ok(),
         sender_ref,
         shutdown_ref,
+        manage_ports_ref,
         already_connected_ports,
         Pcm {
             buffer_size,
@@ -232,6 +270,28 @@ fn send_frames(resource: ResourceArc<SendFramesChannel>, frames: Vec<Sample>) ->
 }
 
 #[rustler::nif]
+fn connect_ports(resource: ResourceArc<PortActionChannel>, port_from_name: String, port_to_name: String) -> Atom {
+    let arc = resource.0.lock().unwrap().clone();
+    let _ = arc.send(PortAction {
+        connect: true,
+        port_to_name,
+        port_from_name,
+    });
+    atoms::ok()
+}
+
+#[rustler::nif]
+fn disconnect_ports(resource: ResourceArc<PortActionChannel>, port_from_name: String, port_to_name: String) -> Atom {
+    let arc = resource.0.lock().unwrap().clone();
+    let _ = arc.send(PortAction {
+        connect: false,
+        port_to_name,
+        port_from_name,
+    });
+    atoms::ok()
+}
+
+#[rustler::nif]
 pub fn stop(resource: ResourceArc<ShutdownChannel>) -> Atom {
     let mut lock = resource.0.lock().unwrap();
 
@@ -244,6 +304,6 @@ pub fn stop(resource: ResourceArc<ShutdownChannel>) -> Atom {
 
 rustler::init!(
     "Elixir.ExJack.Native",
-    [_start, stop, send_frames],
+    [_start, connect_ports, disconnect_ports, stop, send_frames],
     load = load
 );
